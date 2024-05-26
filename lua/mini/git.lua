@@ -72,7 +72,7 @@
 --- # Statusline component ~
 ---
 --- Tracked buffer data can be used in statusline via `vim.b.minigit_summary_string`
---- buffer-local variable. It is exepcted to be used as is. To show another info,
+--- buffer-local variable. It is expected to be used as is. To show another info,
 --- tweak buffer-local variable directly inside `MiniGitUpdated` `User` event: >
 ---
 ---   -- Use only HEAD name as summary string
@@ -230,11 +230,11 @@ local H = {}
 ---@usage `require('mini.git').setup({})` (replace `{}` with your `config` table).
 MiniGit.setup = function(config)
   -- TODO: Remove after Neovim<=0.7 support is dropped
-  if vim.fn.has('nvim-0.8') == 0 then
+  if vim.fn.has("nvim-0.8") == 0 then
     vim.notify(
-      '(mini.git) Neovim<0.8 is soft deprecated (module works but not supported).'
+      "(mini.git) Neovim<0.8 is soft deprecated (module works but not supported)."
         .. ' It will be deprecated after next "mini.nvim" release (module might not work).'
-        .. ' Please update your Neovim version.'
+        .. " Please update your Neovim version."
     )
   end
 
@@ -250,7 +250,9 @@ MiniGit.setup = function(config)
   -- Ensure proper Git executable
   local exec = config.job.git_executable
   H.has_git = vim.fn.executable(exec) == 1
-  if not H.has_git then H.notify('There is no `' .. exec .. '` executable', 'WARN') end
+  if not H.has_git then
+    H.notify("There is no `" .. exec .. "` executable", "WARN")
+  end
 
   -- Define behavior
   H.create_autocommands()
@@ -317,27 +319,33 @@ MiniGit.show_at_cursor = function(opts)
   local cwd = H.get_git_cwd()
 
   -- Try showing commit at cursor
-  local cword = vim.fn.expand('<cword>')
-  local is_commit = string.find(cword, '^%x%x%x%x%x%x%x') ~= nil and string.lower(cword) == cword
+  local cword = vim.fn.expand("<cword>")
+  local is_commit = string.find(cword, "^%x%x%x%x%x%x%x") ~= nil and string.lower(cword) == cword
   if is_commit then
-    local split = H.normalize_split_opt((opts or {}).split or 'auto', 'opts.split')
-    local args = { 'show', cword }
+    local split = H.normalize_split_opt((opts or {}).split or "auto", "opts.split")
+    local args = { "show", cword }
     local lines = H.git_cli_output(args, cwd)
-    if #lines == 0 then return H.notify('Can not show commit ' .. cword, 'WARN') end
-    H.show_in_split(split, lines, 'show', table.concat(args, ' '))
-    vim.bo.filetype = 'git'
+    if #lines == 0 then
+      return H.notify("Can not show commit " .. cword, "WARN")
+    end
+    H.show_in_split(split, lines, "show", table.concat(args, " "))
+    vim.bo.filetype = "git"
     return
   end
 
   -- Try showing diff source
-  if H.diff_pos_to_source() ~= nil then return MiniGit.show_diff_source(opts) end
+  if H.diff_pos_to_source() ~= nil then
+    return MiniGit.show_diff_source(opts)
+  end
 
   -- Try showing range history
   local is_git_enabled = H.is_buf_enabled(vim.api.nvim_get_current_buf())
   local is_diff_source_output = H.parse_diff_source_buf_name(vim.api.nvim_buf_get_name(0)) ~= nil
-  if is_git_enabled or is_diff_source_output then return MiniGit.show_range_history(opts) end
+  if is_git_enabled or is_diff_source_output then
+    return MiniGit.show_range_history(opts)
+  end
 
-  H.notify('Nothing Git-related to show at cursor', 'WARN')
+  H.notify("Nothing Git-related to show at cursor", "WARN")
 end
 
 --- Show diff source
@@ -359,39 +367,41 @@ end
 ---     "both" (both states in vertical split), "auto" (default). Value "auto"
 ---     shows "before" state if cursor line starts with "-", otherwise - "after".
 MiniGit.show_diff_source = function(opts)
-  opts = vim.tbl_deep_extend('force', { split = 'auto', target = 'auto' }, opts or {})
-  local split = H.normalize_split_opt(opts.split, 'opts.split')
+  opts = vim.tbl_deep_extend("force", { split = "auto", target = "auto" }, opts or {})
+  local split = H.normalize_split_opt(opts.split, "opts.split")
   local target = opts.target
-  if not (target == 'auto' or target == 'before' or target == 'after' or target == 'both') then
+  if not (target == "auto" or target == "before" or target == "after" or target == "both") then
     H.error('`opts.target` should be one of "auto", "before", "after", "both".')
   end
 
   local src = H.diff_pos_to_source()
   if src == nil then
-    return H.notify('Could not find diff source. Ensure that cursor is inside a valid diff lines of git log.', 'WARN')
+    return H.notify("Could not find diff source. Ensure that cursor is inside a valid diff lines of git log.", "WARN")
   end
-  if target == 'auto' then target = src.init_prefix == '-' and 'before' or 'after' end
+  if target == "auto" then
+    target = src.init_prefix == "-" and "before" or "after"
+  end
 
   local cwd = H.get_git_cwd()
   local show = function(commit, path, mods)
     local is_worktree, args, lines = commit == true, nil, nil
     if is_worktree then
-      args, lines = { 'edit', vim.fn.fnameescape(path) }, vim.fn.readfile(path)
+      args, lines = { "edit", vim.fn.fnameescape(path) }, vim.fn.readfile(path)
     else
-      args = { 'show', commit .. ':' .. path }
+      args = { "show", commit .. ":" .. path }
       lines = H.git_cli_output(args, cwd)
     end
     if #lines == 0 and not is_worktree then
-      return H.notify('Can not show ' .. path .. 'at commit ' .. commit, 'WARN')
+      return H.notify("Can not show " .. path .. "at commit " .. commit, "WARN")
     end
-    H.show_in_split(mods, lines, 'show', table.concat(args, ' '))
+    H.show_in_split(mods, lines, "show", table.concat(args, " "))
   end
 
   local has_before_shown = false
-  if target ~= 'after' then
+  if target ~= "after" then
     -- "Before" file can be absend if hunk is from newly added file
     if src.path_before == nil then
-      H.notify('Could not find "before" file', 'WARN')
+      H.notify('Could not find "before" file', "WARN")
     else
       show(src.commit_before, src.path_before, split)
       vim.api.nvim_win_set_cursor(0, { src.lnum_before, 0 })
@@ -399,8 +409,8 @@ MiniGit.show_diff_source = function(opts)
     end
   end
 
-  if target ~= 'before' then
-    local mods_after = has_before_shown and 'belowright vertical' or split
+  if target ~= "before" then
+    local mods_after = has_before_shown and "belowright vertical" or split
     show(src.commit_after, src.path_after, mods_after)
     vim.api.nvim_win_set_cursor(0, { src.lnum_after, 0 })
   end
@@ -424,12 +434,14 @@ end
 ---   - <log_args> `(table)` - array of options to append to `git log` call.
 ---   - __git_split_field
 MiniGit.show_range_history = function(opts)
-  local default_opts = { line_start = nil, line_end = nil, log_args = nil, split = 'auto' }
-  opts = vim.tbl_deep_extend('force', default_opts, opts or {})
+  local default_opts = { line_start = nil, line_end = nil, log_args = nil, split = "auto" }
+  opts = vim.tbl_deep_extend("force", default_opts, opts or {})
   local line_start, line_end = H.normalize_range_lines(opts.line_start, opts.line_end)
   local log_args = opts.log_args or {}
-  if not H.islist(log_args) then H.error('`opts.log_args` should be an array.') end
-  local split = H.normalize_split_opt(opts.split, 'opts.split')
+  if not H.islist(log_args) then
+    H.error("`opts.log_args` should be an array.")
+  end
+  local split = H.normalize_split_opt(opts.split, "opts.split")
 
   -- Construct `:Git log` command that works both with regular files and
   -- buffers from `show_diff_source()`
@@ -437,21 +449,23 @@ MiniGit.show_range_history = function(opts)
   local cwd = H.get_git_cwd()
   local commit, rel_path = H.parse_diff_source_buf_name(buf_name)
   if commit == nil then
-    commit, rel_path = 'HEAD', buf_name:gsub(vim.pesc(cwd) .. '/', '')
+    commit, rel_path = "HEAD", buf_name:gsub(vim.pesc(cwd) .. "/", "")
   end
 
   -- Ensure no uncommitted changes as they might result into improper `-L` arg
-  local diff = commit == 'HEAD' and H.git_cli_output({ 'diff', '-U0', 'HEAD', '--', rel_path }, cwd) or {}
+  local diff = commit == "HEAD" and H.git_cli_output({ "diff", "-U0", "HEAD", "--", rel_path }, cwd) or {}
   if #diff ~= 0 then
-    return H.notify('Current file has uncommitted lines. Commit or stash before exploring history.', 'WARN')
+    return H.notify("Current file has uncommitted lines. Commit or stash before exploring history.", "WARN")
   end
 
   -- Show log in split
-  local range_flag = string.format('-L%d,%d:%s', line_start, line_end, rel_path)
-  local args = { 'log', range_flag, commit, unpack(log_args) }
+  local range_flag = string.format("-L%d,%d:%s", line_start, line_end, rel_path)
+  local args = { "log", range_flag, commit, unpack(log_args) }
   local history = H.git_cli_output(args, cwd)
-  if #history == 0 then return H.notify('Could not get range history', 'WARN') end
-  H.show_in_split(split, history, 'log', table.concat(args, ' '))
+  if #history == 0 then
+    return H.notify("Could not get range history", "WARN")
+  end
+  H.show_in_split(split, history, "log", table.concat(args, " "))
 end
 
 --- Fold expression for Git logs
@@ -477,11 +491,19 @@ end
 ---@return number|string Line fold level. See |fold-expr|.
 MiniGit.diff_foldexpr = function(lnum)
   lnum = lnum or vim.v.lnum
-  if H.is_log_entry_header(lnum + 1) or H.is_log_entry_header(lnum) then return 0 end
-  if H.is_file_entry_header(lnum) then return 1 end
-  if H.is_hunk_header(lnum) then return 2 end
-  if H.is_hunk_header(lnum - 1) then return 3 end
-  return '='
+  if H.is_log_entry_header(lnum + 1) or H.is_log_entry_header(lnum) then
+    return 0
+  end
+  if H.is_file_entry_header(lnum) then
+    return 1
+  end
+  if H.is_hunk_header(lnum) then
+    return 2
+  end
+  if H.is_hunk_header(lnum - 1) then
+    return 3
+  end
+  return "="
 end
 
 --- Enable Git tracking in a file buffer
@@ -507,11 +529,15 @@ MiniGit.enable = function(buf_id)
   buf_id = H.validate_buf_id(buf_id)
 
   -- Don't enable more than once
-  if H.is_buf_enabled(buf_id) or H.is_disabled(buf_id) or not H.has_git then return end
+  if H.is_buf_enabled(buf_id) or H.is_disabled(buf_id) or not H.has_git then
+    return
+  end
 
   -- Enable only in buffers which *can* be part of Git repo
   local path = vim.api.nvim_buf_get_name(buf_id)
-  if path == '' or vim.fn.filereadable(path) ~= 1 then return end
+  if path == "" or vim.fn.filereadable(path) ~= 1 then
+    return
+  end
 
   -- Start tracking
   H.cache[buf_id] = {}
@@ -526,7 +552,9 @@ MiniGit.disable = function(buf_id)
   buf_id = H.validate_buf_id(buf_id)
 
   local buf_cache = H.cache[buf_id]
-  if buf_cache == nil then return end
+  if buf_cache == nil then
+    return
+  end
   H.cache[buf_id] = nil
 
   -- Cleanup
@@ -535,7 +563,9 @@ MiniGit.disable = function(buf_id)
 
   -- - Unregister buffer from repo watching with possibly more cleanup
   local repo = buf_cache.repo
-  if H.repos[repo] == nil then return end
+  if H.repos[repo] == nil then
+    return
+  end
   H.repos[repo].buffers[buf_id] = nil
   if vim.tbl_count(H.repos[repo].buffers) == 0 then
     H.teardown_repo_watch(repo)
@@ -550,7 +580,9 @@ end
 ---@param buf_id __git_buf_id
 MiniGit.toggle = function(buf_id)
   buf_id = H.validate_buf_id(buf_id)
-  if H.is_buf_enabled(buf_id) then return MiniGit.disable(buf_id) end
+  if H.is_buf_enabled(buf_id) then
+    return MiniGit.disable(buf_id)
+  end
   return MiniGit.enable(buf_id)
 end
 
@@ -572,7 +604,9 @@ end
 MiniGit.get_buf_data = function(buf_id)
   buf_id = H.validate_buf_id(buf_id)
   local buf_cache = H.cache[buf_id]
-  if buf_cache == nil then return nil end
+  if buf_cache == nil then
+    return nil
+  end
   --stylua: ignore
   return {
     repo   = buf_cache.repo,   root        = buf_cache.root,
@@ -621,28 +655,32 @@ H.skip_sync = false
 H.setup_config = function(config)
   -- General idea: if some table elements are not present in user-supplied
   -- `config`, take them from default config
-  vim.validate({ config = { config, 'table', true } })
-  config = vim.tbl_deep_extend('force', vim.deepcopy(H.default_config), config or {})
+  vim.validate({ config = { config, "table", true } })
+  config = vim.tbl_deep_extend("force", vim.deepcopy(H.default_config), config or {})
 
   vim.validate({
-    job = { config.job, 'table' },
-    command = { config.command, 'table' },
+    job = { config.job, "table" },
+    command = { config.command, "table" },
   })
 
-  local is_split = function(x) return pcall(H.normalize_split_opt, x, 'command.split') end
+  local is_split = function(x)
+    return pcall(H.normalize_split_opt, x, "command.split")
+  end
   vim.validate({
-    ['job.git_executable'] = { config.job.git_executable, 'string' },
-    ['job.timeout'] = { config.job.timeout, 'number' },
-    ['command.split'] = { config.command.split, is_split },
+    ["job.git_executable"] = { config.job.git_executable, "string" },
+    ["job.timeout"] = { config.job.timeout, "number" },
+    ["command.split"] = { config.command.split, is_split },
   })
 
   return config
 end
 
-H.apply_config = function(config) MiniGit.config = config end
+H.apply_config = function(config)
+  MiniGit.config = config
+end
 
 H.create_autocommands = function()
-  local augroup = vim.api.nvim_create_augroup('MiniGit', {})
+  local augroup = vim.api.nvim_create_augroup("MiniGit", {})
 
   local au = function(event, pattern, callback, desc)
     vim.api.nvim_create_autocmd(event, { group = augroup, pattern = pattern, callback = callback, desc = desc })
@@ -650,26 +688,30 @@ H.create_autocommands = function()
 
   -- NOTE: Try auto enabling buffer on every `BufEnter` to not have `:edit`
   -- disabling buffer, as it calls `on_detach()` from buffer watcher
-  au('BufEnter', '*', H.auto_enable, 'Enable Git tracking')
+  au("BufEnter", "*", H.auto_enable, "Enable Git tracking")
 end
 
-H.is_disabled = function(buf_id) return vim.g.minigit_disable == true or vim.b[buf_id or 0].minigit_disable == true end
+H.is_disabled = function(buf_id)
+  return vim.g.minigit_disable == true or vim.b[buf_id or 0].minigit_disable == true
+end
 
 H.create_user_commands = function()
-  local opts = { bang = true, nargs = '+', complete = H.command_complete, desc = 'Execute Git command' }
-  vim.api.nvim_create_user_command('Git', H.command_impl, opts)
+  local opts = { bang = true, nargs = "+", complete = H.command_complete, desc = "Execute Git command" }
+  vim.api.nvim_create_user_command("Git", H.command_impl, opts)
 end
 
 -- Autocommands ---------------------------------------------------------------
 H.auto_enable = vim.schedule_wrap(function(data)
-  if not (vim.api.nvim_buf_is_valid(data.buf) and vim.bo[data.buf].buftype == '') then return end
+  if not (vim.api.nvim_buf_is_valid(data.buf) and vim.bo[data.buf].buftype == "") then
+    return
+  end
   MiniGit.enable(data.buf)
 end)
 
 -- Command --------------------------------------------------------------------
 H.command_impl = function(input)
   if not H.has_git then
-    return H.notify('There is no `' .. MiniGit.config.job.git_executable .. '` executable', 'ERROR')
+    return H.notify("There is no `" .. MiniGit.config.job.git_executable .. "` executable", "ERROR")
   end
 
   H.ensure_git_subcommands()
@@ -681,17 +723,17 @@ H.command_impl = function(input)
   -- (deletes the buffer or closes the window).
   H.ensure_git_editor(input.mods)
   -- NOTE: use `vim.v.progpath` to have same runtime
-  local editor = vim.v.progpath .. ' --clean --headless -u ' .. H.git_editor_config
+  local editor = vim.v.progpath .. " --clean --headless -u " .. H.git_editor_config
 
   -- Setup all environment variables (`vim.loop.spawn()` by default has none)
   local environ = vim.loop.os_environ()
   -- - Use Git related variables to use instance for editing
-  environ.GIT_EDITOR, environ.GIT_SEQUENCE_EDITOR, environ.GIT_PAGER = editor, editor, ''
+  environ.GIT_EDITOR, environ.GIT_SEQUENCE_EDITOR, environ.GIT_PAGER = editor, editor, ""
   -- - Make output as much machine readable as possible
-  environ.NO_COLOR, environ.TERM = 1, 'dumb'
+  environ.NO_COLOR, environ.TERM = 1, "dumb"
   local env = {}
   for k, v in pairs(environ) do
-    table.insert(env, string.format('%s=%s', k, tostring(v)))
+    table.insert(env, string.format("%s=%s", k, tostring(v)))
   end
 
   -- Setup spawn arguments
@@ -706,8 +748,12 @@ H.command_impl = function(input)
   H.cli_run(command, cwd, on_done, { env = env })
 
   -- If needed, synchronously wait for job to finish
-  local sync_check = function() return H.skip_sync or is_done_track.done end
-  if not input.bang then vim.wait(MiniGit.config.job.timeout + 10, sync_check, 1) end
+  local sync_check = function()
+    return H.skip_sync or is_done_track.done
+  end
+  if not input.bang then
+    vim.wait(MiniGit.config.job.timeout + 10, sync_check, 1)
+  end
 end
 
 --stylua: ignore
@@ -803,16 +849,16 @@ H.ensure_git_editor = function(mods)
     -- Define editor state before and after editing path
     H.skip_timeout, H.skip_sync = true, true
     local cleanup = function()
-      local _, channel = pcall(vim.fn.sockconnect, 'pipe', servername, { rpc = true })
-      local has_exec2 = vim.fn.has('nvim-0.9') == 1
-      local method, opts = has_exec2 and 'nvim_exec2' or 'nvim_exec', has_exec2 and {} or false
-      pcall(vim.rpcnotify, channel, method, 'quitall!', opts)
+      local _, channel = pcall(vim.fn.sockconnect, "pipe", servername, { rpc = true })
+      local has_exec2 = vim.fn.has("nvim-0.9") == 1
+      local method, opts = has_exec2 and "nvim_exec2" or "nvim_exec", has_exec2 and {} or false
+      pcall(vim.rpcnotify, channel, method, "quitall!", opts)
       H.skip_timeout, H.skip_sync = false, false
     end
 
     -- Start file edit with proper modifiers in a special window
     mods = H.ensure_mods_is_split(mods)
-    vim.cmd(mods .. ' split ' .. vim.fn.fnameescape(path))
+    vim.cmd(mods .. " split " .. vim.fn.fnameescape(path))
     H.define_minigit_window(cleanup)
   end
 
@@ -820,12 +866,12 @@ H.ensure_git_editor = function(mods)
   -- current instance and don't close until explicitly closed later from this
   -- instance as set up in `MiniGit._edit()`
   local lines = {
-    'lua << EOF',
+    "lua << EOF",
     string.format('local channel = vim.fn.sockconnect("pipe", %s, { rpc = true })', vim.inspect(vim.v.servername)),
-    'local ins = vim.inspect',
+    "local ins = vim.inspect",
     'local lua_cmd = string.format("MiniGit._edit(%s, %s)", ins(vim.fn.argv(0)), ins(vim.v.servername))',
     'vim.rpcrequest(channel, "nvim_exec_lua", lua_cmd, {})',
-    'EOF',
+    "EOF",
   }
   vim.fn.writefile(lines, H.git_editor_config)
 end
@@ -843,39 +889,49 @@ H.command_make_on_done = function(cmd_data, is_done_track)
     -- Trigger "done" event
     cmd_data.git_subcommand = H.command_parse_subcommand(cmd_data.git_command)
     cmd_data.exit_code, cmd_data.stdout, cmd_data.stderr = code, out, err
-    H.trigger_event('MiniGitCommandDone', cmd_data)
+    H.trigger_event("MiniGitCommandDone", cmd_data)
 
     -- Show stderr and stdout
-    if H.cli_err_notify(code, out, err) then return end
+    if H.cli_err_notify(code, out, err) then
+      return
+    end
     H.command_show_stdout(cmd_data)
 
     -- Ensure that all buffers are up to date (avoids "The file has been
     -- changed since reading it" warning)
-    vim.tbl_map(function(buf_id) vim.cmd('checktime ' .. buf_id) end, vim.api.nvim_list_bufs())
+    vim.tbl_map(function(buf_id)
+      vim.cmd("checktime " .. buf_id)
+    end, vim.api.nvim_list_bufs())
   end)
 end
 
 H.command_show_stdout = function(cmd_data)
   local stdout, mods, subcommand = cmd_data.stdout, cmd_data.cmd_input.mods, cmd_data.git_subcommand
-  if stdout == '' or (mods:find('silent') ~= nil and mods:find('unsilent') == nil) then return end
+  if stdout == "" or (mods:find("silent") ~= nil and mods:find("unsilent") == nil) then
+    return
+  end
 
   -- Show in split if explicitly forced or the command shows info.
   -- Use `vim.notify` otherwise.
   local should_split = H.mods_is_split(mods) or H.git_subcommands.info[subcommand]
-  if not should_split then return H.notify(stdout, 'INFO') end
+  if not should_split then
+    return H.notify(stdout, "INFO")
+  end
 
-  local lines = vim.split(stdout, '\n')
-  local name = table.concat(cmd_data.git_command, ' ')
+  local lines = vim.split(stdout, "\n")
+  local name = table.concat(cmd_data.git_command, " ")
   cmd_data.win_source, cmd_data.win_stdout = H.show_in_split(mods, lines, subcommand, name)
 
   -- Trigger "split" event
-  H.trigger_event('MiniGitCommandSplit', cmd_data)
+  H.trigger_event("MiniGitCommandSplit", cmd_data)
 end
 
 H.command_parse_subcommand = function(command)
   local res
   for _, cmd in ipairs(command) do
-    if res == nil and vim.tbl_contains(H.git_subcommands.supported, cmd) then res = cmd end
+    if res == nil and vim.tbl_contains(H.git_subcommands.supported, cmd) then
+      res = cmd
+    end
   end
   return H.git_subcommands.alias[res] or res
 end
@@ -885,18 +941,24 @@ H.command_complete = function(_, line, col)
   local base = H.get_complete_base(line:sub(1, col))
   local candidates, compl_type = H.command_get_complete_candidates(line, col, base)
   -- Allow several "//" at the end for path completion for easier "chaining"
-  if compl_type == 'path' then base = base:gsub('/+$', '/') end
-  return vim.tbl_filter(function(x) return vim.startswith(x, base) end, candidates)
+  if compl_type == "path" then
+    base = base:gsub("/+$", "/")
+  end
+  return vim.tbl_filter(function(x)
+    return vim.startswith(x, base)
+  end, candidates)
 end
 
 H.get_complete_base = function(line)
-  local from, _, res = line:find('(%S*)$')
+  local from, _, res = line:find("(%S*)$")
   while from ~= nil do
-    local cur_from, _, cur_res = line:sub(1, from - 1):find('(%S*\\ )$')
-    if cur_res ~= nil then res = cur_res .. res end
+    local cur_from, _, cur_res = line:sub(1, from - 1):find("(%S*\\ )$")
+    if cur_res ~= nil then
+      res = cur_res .. res
+    end
     from = cur_from
   end
-  return (res:gsub([[\ ]], ' '))
+  return (res:gsub([[\ ]], " "))
 end
 
 H.command_get_complete_candidates = function(line, col, base)
@@ -905,13 +967,13 @@ H.command_get_complete_candidates = function(line, col, base)
   -- Determine current Git subcommand as the earliest present supported one
   local subcmd, subcmd_end = nil, math.huge
   for _, cmd in pairs(H.git_subcommands.supported) do
-    local _, ind = line:find(' ' .. cmd .. ' ', 1, true)
+    local _, ind = line:find(" " .. cmd .. " ", 1, true)
     if ind ~= nil and ind < subcmd_end then
       subcmd, subcmd_end = cmd, ind
     end
   end
 
-  subcmd = subcmd or 'git'
+  subcmd = subcmd or "git"
   local cwd = H.get_git_cwd()
 
   -- Determine command candidates:
@@ -920,20 +982,32 @@ H.command_get_complete_candidates = function(line, col, base)
   -- - Git commands if there is none fully formed yet or cursor is at the end
   --   of the command (to also suggest subcommands).
   -- - Command targets specific for each command (if present).
-  if vim.startswith(base, '-') then return H.command_complete_option(subcmd) end
-  if line:sub(1, col):find(' -- ') ~= nil then return H.command_complete_path(cwd, base) end
-  if subcmd_end == math.huge or (subcmd_end - 1) == col then return H.git_subcommands.complete, 'subcommand' end
+  if vim.startswith(base, "-") then
+    return H.command_complete_option(subcmd)
+  end
+  if line:sub(1, col):find(" -- ") ~= nil then
+    return H.command_complete_path(cwd, base)
+  end
+  if subcmd_end == math.huge or (subcmd_end - 1) == col then
+    return H.git_subcommands.complete, "subcommand"
+  end
 
   subcmd = H.git_subcommands.alias[subcmd] or subcmd
   local complete_targets = H.command_complete_subcommand_targets[subcmd]
-  if complete_targets == nil then return {}, nil end
+  if complete_targets == nil then
+    return {}, nil
+  end
   return complete_targets(cwd, base, line)
 end
 
 H.command_complete_option = function(command)
   local cached_candidates = H.git_subcommands.options[command]
-  if cached_candidates == nil then return {} end
-  if type(cached_candidates) == 'table' then return cached_candidates end
+  if cached_candidates == nil then
+    return {}
+  end
+  if type(cached_candidates) == "table" then
+    return cached_candidates
+  end
 
   -- Use alias's command to compute the options but store cache for alias
   local orig_command = command
@@ -949,9 +1023,11 @@ H.command_complete_option = function(command)
   --         pure `git` do not work); does not provide single dash suggestions;
   --         does not work when not inside Git repo; needs recognizing two word
   --         commands before asking for completion.
-  local lines = H.git_cli_output({ 'help', '--man', command })
+  local lines = H.git_cli_output({ "help", "--man", command })
   -- - Exit early before caching to try again later
-  if #lines == 0 then return {} end
+  if #lines == 0 then
+    return {}
+  end
 
   -- Construct non-duplicating candidates by parsing lines of help page
   local candidates_map = {}
@@ -965,56 +1041,72 @@ H.command_complete_option = function(command)
   -- - All -<number> options, as they are not really completeable.
   local is_in_options_section = false
   for _, l in ipairs(lines) do
-    if is_in_options_section and l:find('^%u[%u ]+$') ~= nil then is_in_options_section = false end
-    if not is_in_options_section and l:find('^%u?[%u ]*OPTIONS$') ~= nil then is_in_options_section = true end
-    if is_in_options_section and l:find('^       %-') ~= nil then H.parse_options(candidates_map, l) end
+    if is_in_options_section and l:find("^%u[%u ]+$") ~= nil then
+      is_in_options_section = false
+    end
+    if not is_in_options_section and l:find("^%u?[%u ]*OPTIONS$") ~= nil then
+      is_in_options_section = true
+    end
+    if is_in_options_section and l:find("^       %-") ~= nil then
+      H.parse_options(candidates_map, l)
+    end
   end
 
   -- Finalize candidates. Should not contain "almost duplicates".
   -- Should also be sorted by relevance: short flags before regular flags.
   -- Inside groups sort alphabetically ignoring case.
-  candidates_map['--'] = nil
+  candidates_map["--"] = nil
   for cmd, _ in pairs(candidates_map) do
     -- There can be two explicitly documented options "--xxx" and "--xxx=".
     -- Use only one of them (without "=").
-    if cmd:sub(-1, -1) == '=' and candidates_map[cmd:sub(1, -2)] ~= nil then candidates_map[cmd] = nil end
+    if cmd:sub(-1, -1) == "=" and candidates_map[cmd:sub(1, -2)] ~= nil then
+      candidates_map[cmd] = nil
+    end
   end
 
   local res = vim.tbl_keys(candidates_map)
   table.sort(res, function(a, b)
-    local a2, b2 = a:sub(2, 2) == '-', b:sub(2, 2) == '-'
-    if a2 and not b2 then return false end
-    if not a2 and b2 then return true end
+    local a2, b2 = a:sub(2, 2) == "-", b:sub(2, 2) == "-"
+    if a2 and not b2 then
+      return false
+    end
+    if not a2 and b2 then
+      return true
+    end
     local a_low, b_low = a:lower(), b:lower()
     return a_low < b_low or (a_low == b_low and a < b)
   end)
 
   -- Cache and return
   H.git_subcommands.options[orig_command] = res
-  return res, 'option'
+  return res, "option"
 end
 
 H.parse_options = function(map, line)
   -- Options are standalone words starting as "-xxx" or "--xxx"
   -- Include possible "=" at the end indicating mandatory value
-  line:gsub('%s(%-[-%w][-%w]*=?)', function(match) map[match] = true end)
+  line:gsub("%s(%-[-%w][-%w]*=?)", function(match)
+    map[match] = true
+  end)
 
   -- Make exceptions for commonly documented "--[no-]xxx" two options
-  line:gsub('%s%-%-%[no%-%]([-%w]+=?)', function(match)
-    map['--' .. match], map['--no-' .. match] = true, true
+  line:gsub("%s%-%-%[no%-%]([-%w]+=?)", function(match)
+    map["--" .. match], map["--no-" .. match] = true, true
   end)
 end
 
 H.command_complete_path = function(cwd, base)
   -- Treat base only as path relative to the command's cwd
-  cwd = cwd:gsub('/+$', '') .. '/'
+  cwd = cwd:gsub("/+$", "") .. "/"
   local cwd_len = cwd:len()
 
   -- List elements from (absolute) target directory
-  local target_dir = vim.fn.fnamemodify(base, ':h')
-  target_dir = (cwd .. target_dir:gsub('^%.$', '')):gsub('/+$', '') .. '/'
+  local target_dir = vim.fn.fnamemodify(base, ":h")
+  target_dir = (cwd .. target_dir:gsub("^%.$", "")):gsub("/+$", "") .. "/"
   local ok, fs_entries = pcall(vim.fn.readdir, target_dir)
-  if not ok then return {} end
+  if not ok then
+    return {}
+  end
 
   -- List directories and files separately
   local dirs, files = {}, {}
@@ -1023,30 +1115,40 @@ H.command_complete_path = function(cwd, base)
     local arr = vim.fn.isdirectory(entry_abs) == 1 and dirs or files
     table.insert(arr, entry_abs)
   end
-  dirs = vim.tbl_map(function(x) return x .. '/' end, dirs)
+  dirs = vim.tbl_map(function(x)
+    return x .. "/"
+  end, dirs)
 
   -- List ordered directories first followed by ordered files
-  local order_ignore_case = function(a, b) return a:lower() < b:lower() end
+  local order_ignore_case = function(a, b)
+    return a:lower() < b:lower()
+  end
   table.sort(dirs, order_ignore_case)
   table.sort(files, order_ignore_case)
 
   -- Return candidates relative to command's cwd
   local all = dirs
   vim.list_extend(all, files)
-  local res = vim.tbl_map(function(x) return x:sub(cwd_len + 1) end, all)
-  return res, 'path'
+  local res = vim.tbl_map(function(x)
+    return x:sub(cwd_len + 1)
+  end, all)
+  return res, "path"
 end
 
 H.command_complete_pullpush = function(cwd, _, line)
   -- Suggest remotes at `Git push |` and `Git push or|`, otherwise - references
   -- Ignore options when deciding which suggestion to compute
-  local _, n_words = line:gsub(' (%-%S+)', ''):gsub('%S+ ', '')
-  if n_words <= 2 then return H.git_cli_output({ 'remote' }, cwd), 'remote' end
-  return H.git_cli_output({ 'rev-parse', '--symbolic', '--branches', '--tags' }, cwd), 'ref'
+  local _, n_words = line:gsub(" (%-%S+)", ""):gsub("%S+ ", "")
+  if n_words <= 2 then
+    return H.git_cli_output({ "remote" }, cwd), "remote"
+  end
+  return H.git_cli_output({ "rev-parse", "--symbolic", "--branches", "--tags" }, cwd), "ref"
 end
 
 H.make_git_cli_complete = function(args, complete_type)
-  return function(cwd, _) return H.git_cli_output(args, cwd), complete_type end
+  return function(cwd, _)
+    return H.git_cli_output(args, cwd), complete_type
+  end
 end
 
 -- Cover at least all subcommands listed in `git help`
@@ -1095,29 +1197,33 @@ H.command_complete_subcommand_targets = {
 
 H.ensure_mods_is_split = function(mods)
   if not H.mods_is_split(mods) then
-    local split_val = H.normalize_split_opt(MiniGit.config.command.split, '`config.command.split`')
-    mods = split_val .. ' ' .. mods
+    local split_val = H.normalize_split_opt(MiniGit.config.command.split, "`config.command.split`")
+    mods = split_val .. " " .. mods
   end
   -- Support for `:horizontal` was added in Neovim=0.8
   -- TODO: Remove after compatibility with Neovim=0.7 is dropped
-  if vim.fn.has('nvim-0.8') == 0 then mods = mods:gsub('horizontal ?', '') end
+  if vim.fn.has("nvim-0.8") == 0 then
+    mods = mods:gsub("horizontal ?", "")
+  end
   return mods
 end
 
 -- NOTE: `mods` is already expanded, so this also covers abbreviated mods
-H.mods_is_split = function(mods) return mods:find('vertical') or mods:find('horizontal') or mods:find('tab') end
+H.mods_is_split = function(mods)
+  return mods:find("vertical") or mods:find("horizontal") or mods:find("tab")
+end
 
 -- Show stdout ----------------------------------------------------------------
 H.show_in_split = function(mods, lines, subcmd, name)
   -- Create a target window split
   mods = H.ensure_mods_is_split(mods)
   local win_source = vim.api.nvim_get_current_win()
-  vim.cmd(mods .. ' split')
+  vim.cmd(mods .. " split")
   local win_stdout = vim.api.nvim_get_current_win()
 
   -- Prepare buffer
   local buf_id = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_name(buf_id, 'minigit://' .. buf_id .. '/' .. name)
+  vim.api.nvim_buf_set_name(buf_id, "minigit://" .. buf_id .. "/" .. name)
   vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, lines)
 
   vim.api.nvim_set_current_buf(buf_id)
@@ -1126,16 +1232,26 @@ H.show_in_split = function(mods, lines, subcmd, name)
   -- NOTE: set filetype when buffer is in window to allow setting window-local
   -- options in autocommands for `FileType` events
   local filetype
-  if subcmd == 'diff' then filetype = 'diff' end
-  if subcmd == 'log' or subcmd == 'blame' then filetype = 'git' end
+  if subcmd == "diff" then
+    filetype = "diff"
+  end
+  if subcmd == "log" or subcmd == "blame" then
+    filetype = "git"
+  end
   -- TODO: Remove after compatibility with Neovim=0.7 is dropped
-  if subcmd == 'show' and vim.fn.has('nvim-0.8') == 1 then filetype = vim.filetype.match({ buf = buf_id }) end
+  if subcmd == "show" and vim.fn.has("nvim-0.8") == 1 then
+    filetype = vim.filetype.match({ buf = buf_id })
+  end
 
-  local has_filetype = not (filetype == nil or filetype == '')
-  if has_filetype then vim.bo[buf_id].filetype = filetype end
+  local has_filetype = not (filetype == nil or filetype == "")
+  if has_filetype then
+    vim.bo[buf_id].filetype = filetype
+  end
 
   -- Completely unfold for no filetype output (like `:Git help`)
-  if not has_filetype then vim.wo[win_stdout].foldlevel = 999 end
+  if not has_filetype then
+    vim.wo[win_stdout].foldlevel = 999
+  end
 
   return win_source, win_stdout
 end
@@ -1147,72 +1263,88 @@ H.define_minigit_window = function(cleanup)
   -- Define action to finish editing Git related file
   local finish_au_id
   local finish = function(data)
-    local should_close = data.buf == buf_id or (data.event == 'WinClosed' and tonumber(data.match) == win_id)
-    if not should_close then return end
+    local should_close = data.buf == buf_id or (data.event == "WinClosed" and tonumber(data.match) == win_id)
+    if not should_close then
+      return
+    end
 
     pcall(vim.api.nvim_del_autocmd, finish_au_id)
     pcall(vim.api.nvim_win_close, win_id, true)
-    vim.schedule(function() pcall(vim.api.nvim_buf_delete, buf_id, { force = true }) end)
+    vim.schedule(function()
+      pcall(vim.api.nvim_buf_delete, buf_id, { force = true })
+    end)
 
-    if vim.is_callable(cleanup) then vim.schedule(cleanup) end
+    if vim.is_callable(cleanup) then
+      vim.schedule(cleanup)
+    end
   end
   -- - Use `nested` to allow other events (`WinEnter` for 'mini.statusline')
-  local events = { 'WinClosed', 'BufDelete', 'BufWipeout', 'VimLeave' }
-  local opts = { nested = true, callback = finish, desc = 'Cleanup window and buffer' }
+  local events = { "WinClosed", "BufDelete", "BufWipeout", "VimLeave" }
+  local opts = { nested = true, callback = finish, desc = "Cleanup window and buffer" }
   finish_au_id = vim.api.nvim_create_autocmd(events, opts)
 end
 
 H.git_cli_output = function(args, cwd)
   local command = { MiniGit.config.job.git_executable, unpack(args) }
   local res = H.cli_run(command, cwd).out
-  if res == '' then return {} end
-  return vim.split(res, '\n')
+  if res == "" then
+    return {}
+  end
+  return vim.split(res, "\n")
 end
 
 -- Validators -----------------------------------------------------------------
 H.validate_buf_id = function(x)
-  if x == nil or x == 0 then return vim.api.nvim_get_current_buf() end
-  if not (type(x) == 'number' and vim.api.nvim_buf_is_valid(x)) then
-    H.error('`buf_id` should be `nil` or valid buffer id.')
+  if x == nil or x == 0 then
+    return vim.api.nvim_get_current_buf()
+  end
+  if not (type(x) == "number" and vim.api.nvim_buf_is_valid(x)) then
+    H.error("`buf_id` should be `nil` or valid buffer id.")
   end
   return x
 end
 
 H.normalize_split_opt = function(x, x_name)
-  if x == 'auto' then
+  if x == "auto" then
     -- Show in same tabpage if only minigit buffers visible. Otherwise in new.
     for _, win_id in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
       local win_buf_id = vim.api.nvim_win_get_buf(win_id)
       local win_buf_name = vim.api.nvim_buf_get_name(win_buf_id)
-      local is_minigit_win = win_buf_name:find('^minigit://%d+/') ~= nil
-      local is_normal_win = vim.api.nvim_win_get_config(win_id).relative == ''
-      if not is_minigit_win and is_normal_win then return 'tab' end
+      local is_minigit_win = win_buf_name:find("^minigit://%d+/") ~= nil
+      local is_normal_win = vim.api.nvim_win_get_config(win_id).relative == ""
+      if not is_minigit_win and is_normal_win then
+        return "tab"
+      end
     end
-    return 'vertical'
+    return "vertical"
   end
-  if x == 'horizontal' or x == 'vertical' or x == 'tab' then return x end
-  H.error('`' .. x_name .. '` should be one of "auto", "horizontal", "vertical", "tab"')
+  if x == "horizontal" or x == "vertical" or x == "tab" then
+    return x
+  end
+  H.error("`" .. x_name .. '` should be one of "auto", "horizontal", "vertical", "tab"')
 end
 
 H.normalize_range_lines = function(line_start, line_end)
   if line_start == nil and line_end == nil then
-    line_start = vim.fn.line('.')
-    local is_visual = vim.tbl_contains({ 'v', 'V', '\22' }, vim.fn.mode())
-    line_end = is_visual and vim.fn.line('v') or vim.fn.line('.')
+    line_start = vim.fn.line(".")
+    local is_visual = vim.tbl_contains({ "v", "V", "\22" }, vim.fn.mode())
+    line_end = is_visual and vim.fn.line("v") or vim.fn.line(".")
     line_start, line_end = math.min(line_start, line_end), math.max(line_start, line_end)
   end
 
-  if not (type(line_start) == 'number' and type(line_end) == 'number' and line_start <= line_end) then
-    H.error('`line_start` and `line_end` should be non-decreasing numbers.')
+  if not (type(line_start) == "number" and type(line_end) == "number" and line_start <= line_end) then
+    H.error("`line_start` and `line_end` should be non-decreasing numbers.")
   end
   return line_start, line_end
 end
 
 -- Enabling -------------------------------------------------------------------
-H.is_buf_enabled = function(buf_id) return H.cache[buf_id] ~= nil and vim.api.nvim_buf_is_valid(buf_id) end
+H.is_buf_enabled = function(buf_id)
+  return H.cache[buf_id] ~= nil and vim.api.nvim_buf_is_valid(buf_id)
+end
 
 H.setup_buf_behavior = function(buf_id)
-  local augroup = vim.api.nvim_create_augroup('MiniGitBuffer' .. buf_id, { clear = true })
+  local augroup = vim.api.nvim_create_augroup("MiniGitBuffer" .. buf_id, { clear = true })
   H.cache[buf_id].augroup = augroup
 
   vim.api.nvim_buf_attach(buf_id, false, {
@@ -1220,7 +1352,9 @@ H.setup_buf_behavior = function(buf_id)
     -- Needed as otherwise `on_detach()` is called without later auto enabling
     on_reload = function()
       local buf_cache = H.cache[buf_id]
-      if buf_cache == nil or buf_cache.root == nil then return end
+      if buf_cache == nil or buf_cache.root == nil then
+        return
+      end
       -- Don't upate repo/root as it is tracked in 'BufFilePost' autocommand
       H.update_git_head(buf_cache.root, { buf_id })
       H.update_git_in_progress(buf_cache.repo, { buf_id })
@@ -1230,26 +1364,32 @@ H.setup_buf_behavior = function(buf_id)
     -- Called when buffer is unloaded from memory (`:h nvim_buf_detach_event`),
     -- **including** `:edit` command. Together with auto enabling it makes
     -- `:edit` command serve as "restart".
-    on_detach = function() MiniGit.disable(buf_id) end,
+    on_detach = function()
+      MiniGit.disable(buf_id)
+    end,
   })
 
   local reset_if_enabled = vim.schedule_wrap(function(data)
-    if not H.is_buf_enabled(data.buf) then return end
+    if not H.is_buf_enabled(data.buf) then
+      return
+    end
     MiniGit.disable(data.buf)
     MiniGit.enable(data.buf)
   end)
-  local bufrename_opts = { group = augroup, buffer = buf_id, callback = reset_if_enabled, desc = 'Reset on rename' }
+  local bufrename_opts = { group = augroup, buffer = buf_id, callback = reset_if_enabled, desc = "Reset on rename" }
   -- NOTE: `BufFilePost` does not look like a proper event, but it (yet) works
-  vim.api.nvim_create_autocmd('BufFilePost', bufrename_opts)
+  vim.api.nvim_create_autocmd("BufFilePost", bufrename_opts)
 
-  local buf_disable = function() MiniGit.disable(buf_id) end
-  local bufdelete_opts = { group = augroup, buffer = buf_id, callback = buf_disable, desc = 'Disable on delete' }
-  vim.api.nvim_create_autocmd('BufDelete', bufdelete_opts)
+  local buf_disable = function()
+    MiniGit.disable(buf_id)
+  end
+  local bufdelete_opts = { group = augroup, buffer = buf_id, callback = buf_disable, desc = "Disable on delete" }
+  vim.api.nvim_create_autocmd("BufDelete", bufdelete_opts)
 end
 
 -- Tracking -------------------------------------------------------------------
 H.start_tracking = function(buf_id, path)
-  local command = H.git_cmd({ 'rev-parse', '--path-format=absolute', '--git-dir', '--show-toplevel' })
+  local command = H.git_cmd({ "rev-parse", "--path-format=absolute", "--git-dir", "--show-toplevel" })
 
   -- If path is not in Git, disable buffer but make sure that it will not try
   -- to re-attach until buffer is properly disabled
@@ -1260,12 +1400,16 @@ H.start_tracking = function(buf_id, path)
 
   local on_done = vim.schedule_wrap(function(code, out, err)
     -- Watch git directory only if there was no error retrieving path to it
-    if code ~= 0 then return on_not_in_git() end
+    if code ~= 0 then
+      return on_not_in_git()
+    end
     H.cli_err_notify(code, out, err)
 
     -- Update buf data
-    local repo, root = string.match(out, '^(.-)\n(.*)$')
-    if repo == nil or root == nil then return H.notify('No initial data for buffer ' .. buf_id, 'WARN') end
+    local repo, root = string.match(out, "^(.-)\n(.*)$")
+    if repo == nil or root == nil then
+      return H.notify("No initial data for buffer " .. buf_id, "WARN")
+    end
     H.update_buf_data(buf_id, { repo = repo, root = root })
 
     -- Set up repo watching to react to Git index changes
@@ -1280,7 +1424,7 @@ H.start_tracking = function(buf_id, path)
     H.update_git_status(root, { buf_id })
   end)
 
-  H.cli_run(command, vim.fn.fnamemodify(path, ':h'), on_done)
+  H.cli_run(command, vim.fn.fnamemodify(path, ":h"), on_done)
 end
 
 H.setup_repo_watch = function(buf_id, repo)
@@ -1292,10 +1436,14 @@ H.setup_repo_watch = function(buf_id, repo)
     H.teardown_repo_watch(repo)
     local fs_event, timer = vim.loop.new_fs_event(), vim.loop.new_timer()
 
-    local on_change = vim.schedule_wrap(function() H.on_repo_change(repo) end)
+    local on_change = vim.schedule_wrap(function()
+      H.on_repo_change(repo)
+    end)
     local watch = function(_, filename, _)
       -- Ignore temporary changes
-      if vim.endswith(filename, 'lock') then return end
+      if vim.endswith(filename, "lock") then
+        return
+      end
 
       -- Debounce to not overload during incremental staging (like in script)
       timer:stop()
@@ -1317,23 +1465,31 @@ H.setup_repo_watch = function(buf_id, repo)
 end
 
 H.teardown_repo_watch = function(repo)
-  if H.repos[repo] == nil then return end
+  if H.repos[repo] == nil then
+    return
+  end
   pcall(vim.loop.fs_event_stop, H.repos[repo].fs_event)
   pcall(vim.loop.timer_stop, H.repos[repo].timer)
 end
 
 H.setup_path_watch = function(buf_id, repo)
-  if not H.is_buf_enabled(buf_id) then return end
+  if not H.is_buf_enabled(buf_id) then
+    return
+  end
 
-  local on_file_change = function(data) H.update_git_status(H.cache[buf_id].root, { buf_id }) end
+  local on_file_change = function(data)
+    H.update_git_status(H.cache[buf_id].root, { buf_id })
+  end
   vim.api.nvim_create_autocmd(
-    { 'BufWritePost', 'FileChangedShellPost' },
-    { desc = 'Update Git status', group = H.cache[buf_id].augroup, callback = on_file_change }
+    { "BufWritePost", "FileChangedShellPost" },
+    { desc = "Update Git status", group = H.cache[buf_id].augroup, callback = on_file_change }
   )
 end
 
 H.on_repo_change = function(repo)
-  if H.repos[repo] == nil then return end
+  if H.repos[repo] == nil then
+    return
+  end
 
   -- Collect repo's worktrees with their buffers while doing cleanup
   local repo_bufs, root_bufs = H.repos[repo].buffers, {}
@@ -1359,16 +1515,18 @@ H.on_repo_change = function(repo)
 end
 
 H.update_git_head = function(root, bufs)
-  local command = H.git_cmd({ 'rev-parse', 'HEAD', '--abbrev-ref', 'HEAD' })
+  local command = H.git_cmd({ "rev-parse", "HEAD", "--abbrev-ref", "HEAD" })
 
   local on_done = vim.schedule_wrap(function(code, out, err)
     -- Ensure proper data
-    if code ~= 0 then return end
+    if code ~= 0 then
+      return
+    end
     H.cli_err_notify(code, out, err)
 
-    local head, head_name = string.match(out, '^(.-)\n(.*)$')
+    local head, head_name = string.match(out, "^(.-)\n(.*)$")
     if head == nil or head_name == nil then
-      return H.notify('Could not parse HEAD data for root ' .. root .. '\n' .. out, 'WARN')
+      return H.notify("Could not parse HEAD data for root " .. root .. "\n" .. out, "WARN")
     end
 
     -- Update data for all buffers from target `root`
@@ -1387,15 +1545,27 @@ end
 H.update_git_in_progress = function(repo, bufs)
   -- Get data about what process is in progress
   local in_progress = {}
-  if H.is_fs_present(repo .. '/BISECT_LOG') then table.insert(in_progress, 'bisect') end
-  if H.is_fs_present(repo .. '/CHERRY_PICK_HEAD') then table.insert(in_progress, 'cherry-pick') end
-  if H.is_fs_present(repo .. '/MERGE_HEAD') then table.insert(in_progress, 'merge') end
-  if H.is_fs_present(repo .. '/REVERT_HEAD') then table.insert(in_progress, 'revert') end
-  if H.is_fs_present(repo .. '/rebase-apply') then table.insert(in_progress, 'apply') end
-  if H.is_fs_present(repo .. '/rebase-merge') then table.insert(in_progress, 'rebase') end
+  if H.is_fs_present(repo .. "/BISECT_LOG") then
+    table.insert(in_progress, "bisect")
+  end
+  if H.is_fs_present(repo .. "/CHERRY_PICK_HEAD") then
+    table.insert(in_progress, "cherry-pick")
+  end
+  if H.is_fs_present(repo .. "/MERGE_HEAD") then
+    table.insert(in_progress, "merge")
+  end
+  if H.is_fs_present(repo .. "/REVERT_HEAD") then
+    table.insert(in_progress, "revert")
+  end
+  if H.is_fs_present(repo .. "/rebase-apply") then
+    table.insert(in_progress, "apply")
+  end
+  if H.is_fs_present(repo .. "/rebase-merge") then
+    table.insert(in_progress, "rebase")
+  end
 
   -- Update data for all buffers from target `root`
-  local new_data = { in_progress = table.concat(in_progress, ',') }
+  local new_data = { in_progress = table.concat(in_progress, ",") }
   for _, buf_id in ipairs(bufs) do
     H.update_buf_data(buf_id, new_data)
   end
@@ -1405,7 +1575,7 @@ H.update_git_in_progress = function(repo, bufs)
 end
 
 H.update_git_status = function(root, bufs)
-  local command = H.git_cmd({ 'status', '--verbose', '--untracked-files=all', '--ignored', '--porcelain', '-z', '--' })
+  local command = H.git_cmd({ "status", "--verbose", "--untracked-files=all", "--ignored", "--porcelain", "-z", "--" })
   local root_len, path_data = string.len(root), {}
   for _, buf_id in ipairs(bufs) do
     -- Use paths relative to the root as in `git status --porcelain` output
@@ -1413,17 +1583,21 @@ H.update_git_status = function(root, bufs)
     table.insert(command, rel_path)
     -- Completely not modified paths should be the only ones missing in the
     -- output. Use this status as default.
-    path_data[rel_path] = { status = '  ', buf_id = buf_id }
+    path_data[rel_path] = { status = "  ", buf_id = buf_id }
   end
 
   local on_done = vim.schedule_wrap(function(code, out, err)
-    if code ~= 0 then return end
+    if code ~= 0 then
+      return
+    end
     H.cli_err_notify(code, out, err)
 
     -- Parse CLI output, which is separated by `\0` to not escape "bad" paths
-    for _, l in ipairs(vim.split(out, '\0')) do
-      local status, rel_path = string.match(l, '^(..) (.*)$')
-      if path_data[rel_path] ~= nil then path_data[rel_path].status = status end
+    for _, l in ipairs(vim.split(out, "\0")) do
+      local status, rel_path = string.match(l, "^(..) (.*)$")
+      if path_data[rel_path] ~= nil then
+        path_data[rel_path].status = status
+      end
     end
 
     -- Update data for all buffers
@@ -1440,7 +1614,9 @@ H.update_git_status = function(root, bufs)
 end
 
 H.update_buf_data = function(buf_id, new_data)
-  if not H.is_buf_enabled(buf_id) then return end
+  if not H.is_buf_enabled(buf_id) then
+    return
+  end
 
   local summary = vim.b[buf_id].minigit_summary or {}
   for key, val in pairs(new_data) do
@@ -1449,19 +1625,23 @@ H.update_buf_data = function(buf_id, new_data)
   vim.b[buf_id].minigit_summary = summary
 
   -- Format summary string
-  local head = summary.head_name or ''
-  head = head == 'HEAD' and summary.head:sub(1, 7) or head
+  local head = summary.head_name or ""
+  head = head == "HEAD" and summary.head:sub(1, 7) or head
 
-  local in_progress = summary.in_progress or ''
-  if in_progress ~= '' then head = head .. '|' .. in_progress end
+  local in_progress = summary.in_progress or ""
+  if in_progress ~= "" then
+    head = head .. "|" .. in_progress
+  end
 
   local summary_string = head
-  local status = summary.status or ''
-  if status ~= '  ' and status ~= '' then summary_string = string.format('%s (%s)', head, status) end
+  local status = summary.status or ""
+  if status ~= "  " and status ~= "" then
+    summary_string = string.format("%s (%s)", head, status)
+  end
   vim.b[buf_id].minigit_summary_string = summary_string
 
   -- Trigger dedicated event
-  H.trigger_event('MiniGitUpdated')
+  H.trigger_event("MiniGitUpdated")
 end
 
 -- History navigation ---------------------------------------------------------
@@ -1469,7 +1649,7 @@ end
 -- compute path, line number, and commit of both "before" and "after" files.
 -- Allow cursor to be between "--- a/xxx" line and last line of a hunk.
 H.diff_pos_to_source = function()
-  local lines, lnum = vim.api.nvim_buf_get_lines(0, 0, -1, false), vim.fn.line('.')
+  local lines, lnum = vim.api.nvim_buf_get_lines(0, 0, -1, false), vim.fn.line(".")
 
   local res = { init_prefix = lines[lnum]:sub(1, 1) }
   local paths_lnum = H.diff_parse_paths(res, lines, lnum)
@@ -1477,99 +1657,119 @@ H.diff_pos_to_source = function()
   local commit_lnum = H.diff_parse_commits(res, lines, lnum)
 
   -- Try fall back to inferring target commits from 'mini.git' buffer name
-  if res.commit_before == nil or res.commit_after == nil then H.diff_parse_bufname(res) end
+  if res.commit_before == nil or res.commit_after == nil then
+    H.diff_parse_bufname(res)
+  end
 
   local all_present = res.lnum_after and res.path_after and res.commit_after
   local is_in_order = commit_lnum <= paths_lnum and paths_lnum <= hunk_lnum
-  if not (all_present and is_in_order) then return nil end
+  if not (all_present and is_in_order) then
+    return nil
+  end
 
   return res
 end
 
 H.diff_parse_paths = function(out, lines, lnum)
-  local pattern_before, pattern_after = '^%-%-%- a/(.*)$', '^%+%+%+ b/(.*)$'
+  local pattern_before, pattern_after = "^%-%-%- a/(.*)$", "^%+%+%+ b/(.*)$"
 
   -- Allow placing cursor directly on path defining lines
   local cur_line = lines[lnum]
   local path_before, path_after = string.match(cur_line, pattern_before), string.match(cur_line, pattern_after)
   if path_before ~= nil or path_after ~= nil then
-    out.path_before = path_before or string.match(lines[lnum - 1] or '', pattern_before)
-    out.path_after = path_after or string.match(lines[lnum + 1] or '', pattern_after)
+    out.path_before = path_before or string.match(lines[lnum - 1] or "", pattern_before)
+    out.path_after = path_after or string.match(lines[lnum + 1] or "", pattern_after)
     out.lnum_before, out.lnum_after = 1, 1
   else
     -- Iterate lines upward to find path patterns
     while out.path_after == nil and lnum > 0 do
-      out.path_after = string.match(lines[lnum] or '', pattern_after)
+      out.path_after = string.match(lines[lnum] or "", pattern_after)
       lnum = lnum - 1
     end
-    out.path_before = string.match(lines[lnum] or '', pattern_before)
+    out.path_before = string.match(lines[lnum] or "", pattern_before)
   end
 
   return lnum
 end
 
 H.diff_parse_hunk = function(out, lines, lnum)
-  if out.lnum_after ~= nil then return lnum end
+  if out.lnum_after ~= nil then
+    return lnum
+  end
 
-  local offsets = { [' '] = 0, ['-'] = 0, ['+'] = 0 }
+  local offsets = { [" "] = 0, ["-"] = 0, ["+"] = 0 }
   while lnum > 0 do
     local prefix = lines[lnum]:sub(1, 1)
-    if not (prefix == ' ' or prefix == '-' or prefix == '+') then break end
+    if not (prefix == " " or prefix == "-" or prefix == "+") then
+      break
+    end
     offsets[prefix] = offsets[prefix] + 1
     lnum = lnum - 1
   end
 
-  local hunk_start_before, hunk_start_after = string.match(lines[lnum] or '', '^@@ %-(%d+),?%d* %+(%d+),?%d* @@')
+  local hunk_start_before, hunk_start_after = string.match(lines[lnum] or "", "^@@ %-(%d+),?%d* %+(%d+),?%d* @@")
   if hunk_start_before ~= nil then
-    out.lnum_before = math.max(1, tonumber(hunk_start_before) + offsets[' '] + offsets['-'] - 1)
-    out.lnum_after = math.max(1, tonumber(hunk_start_after) + offsets[' '] + offsets['+'] - 1)
+    out.lnum_before = math.max(1, tonumber(hunk_start_before) + offsets[" "] + offsets["-"] - 1)
+    out.lnum_after = math.max(1, tonumber(hunk_start_after) + offsets[" "] + offsets["+"] - 1)
   end
   return lnum
 end
 
 H.diff_parse_commits = function(out, lines, lnum)
   while out.commit_after == nil and lnum > 0 do
-    out.commit_after = string.match(lines[lnum], '^commit (%x+)$')
+    out.commit_after = string.match(lines[lnum], "^commit (%x+)$")
     lnum = lnum - 1
   end
-  if out.commit_after ~= nil then out.commit_before = out.commit_after .. '~' end
+  if out.commit_after ~= nil then
+    out.commit_before = out.commit_after .. "~"
+  end
   return lnum + 1
 end
 
 H.diff_parse_bufname = function(out)
   local buf_name = vim.api.nvim_buf_get_name(0)
-  local diff_command = string.match(buf_name, '^minigit://%d+/.* diff ?(.*)$')
-  if diff_command == nil then return end
+  local diff_command = string.match(buf_name, "^minigit://%d+/.* diff ?(.*)$")
+  if diff_command == nil then
+    return
+  end
 
   -- Work with output of common `:Git diff` commands
   diff_command = vim.trim(diff_command)
   -- `Git diff` - compares index and work tree
-  if diff_command == '' then
-    out.commit_before, out.commit_after = ':0', true
+  if diff_command == "" then
+    out.commit_before, out.commit_after = ":0", true
   end
   -- `Git diff --cached` - compares HEAD and index
-  if diff_command == '--cached' then
-    out.commit_before, out.commit_after = 'HEAD', ':0'
+  if diff_command == "--cached" then
+    out.commit_before, out.commit_after = "HEAD", ":0"
   end
   -- `Git diff HEAD` - compares commit and work tree
-  if diff_command:find('^[^-]%S*$') ~= nil then
+  if diff_command:find("^[^-]%S*$") ~= nil then
     out.commit_before, out.commit_after = diff_command, true
   end
 end
 
-H.parse_diff_source_buf_name = function(buf_name) return string.match(buf_name, '^minigit://%d+/.*show (%x+~?):(.*)$') end
+H.parse_diff_source_buf_name = function(buf_name)
+  return string.match(buf_name, "^minigit://%d+/.*show (%x+~?):(.*)$")
+end
 
 -- Folding --------------------------------------------------------------------
-H.is_hunk_header = function(lnum) return vim.fn.getline(lnum):find('^@@.*@@') ~= nil end
+H.is_hunk_header = function(lnum)
+  return vim.fn.getline(lnum):find("^@@.*@@") ~= nil
+end
 
-H.is_log_entry_header = function(lnum) return vim.fn.getline(lnum):find('^commit ') ~= nil end
+H.is_log_entry_header = function(lnum)
+  return vim.fn.getline(lnum):find("^commit ") ~= nil
+end
 
-H.is_file_entry_header = function(lnum) return vim.fn.getline(lnum):find('^diff %-%-git') ~= nil end
+H.is_file_entry_header = function(lnum)
+  return vim.fn.getline(lnum):find("^diff %-%-git") ~= nil
+end
 
 -- CLI ------------------------------------------------------------------------
 H.git_cmd = function(args)
   -- Use '-c gc.auto=0' to disable `stderr` "Auto packing..." messages
-  return { MiniGit.config.job.git_executable, '-c', 'gc.auto=0', unpack(args) }
+  return { MiniGit.config.job.git_executable, "-c", "gc.auto=0", unpack(args) }
 end
 
 H.cli_run = function(command, cwd, on_done, opts)
@@ -1582,21 +1782,27 @@ H.cli_run = function(command, cwd, on_done, opts)
   local is_sync, res = false, nil
   if on_done == nil then
     is_sync = true
-    on_done = function(code, out, err) res = { code = code, out = out, err = err } end
+    on_done = function(code, out, err)
+      res = { code = code, out = out, err = err }
+    end
   end
 
   local out, err, is_done = {}, {}, false
   local on_exit = function(code)
     -- Ensure calling this only once
-    if is_done then return end
+    if is_done then
+      return
+    end
     is_done = true
 
-    if process:is_closing() then return end
+    if process:is_closing() then
+      return
+    end
     process:close()
 
     -- Convert to strings appropriate for notifications
     out = H.cli_stream_tostring(out)
-    err = H.cli_stream_tostring(err):gsub('\r+', '\n'):gsub('\n%s+\n', '\n\n')
+    err = H.cli_stream_tostring(err):gsub("\r+", "\n"):gsub("\n%s+\n", "\n\n")
     on_done(code, out, err)
   end
 
@@ -1604,56 +1810,88 @@ H.cli_run = function(command, cwd, on_done, opts)
   H.cli_read_stream(stdout, out)
   H.cli_read_stream(stderr, err)
   vim.defer_fn(function()
-    if H.skip_timeout or not process:is_active() then return end
-    H.notify('PROCESS REACHED TIMEOUT', 'WARN')
+    if H.skip_timeout or not process:is_active() then
+      return
+    end
+    H.notify("PROCESS REACHED TIMEOUT", "WARN")
     on_exit(1)
   end, MiniGit.config.job.timeout)
 
-  if is_sync then vim.wait(MiniGit.config.job.timeout + 10, function() return is_done end, 1) end
+  if is_sync then
+    vim.wait(MiniGit.config.job.timeout + 10, function()
+      return is_done
+    end, 1)
+  end
   return res
 end
 
 H.cli_read_stream = function(stream, feed)
   local callback = function(err, data)
-    if err then return table.insert(feed, 1, 'ERROR: ' .. err) end
-    if data ~= nil then return table.insert(feed, data) end
+    if err then
+      return table.insert(feed, 1, "ERROR: " .. err)
+    end
+    if data ~= nil then
+      return table.insert(feed, data)
+    end
     stream:close()
   end
   stream:read_start(callback)
 end
 
-H.cli_stream_tostring = function(stream) return (table.concat(stream):gsub('\n+$', '')) end
+H.cli_stream_tostring = function(stream)
+  return (table.concat(stream):gsub("\n+$", ""))
+end
 
 H.cli_err_notify = function(code, out, err)
   local should_stop = code ~= 0
-  if should_stop then H.notify(err .. (out == '' and '' or ('\n' .. out)), 'ERROR') end
-  if not should_stop and err ~= '' then H.notify(err, 'WARN') end
+  if should_stop then
+    H.notify(err .. (out == "" and "" or ("\n" .. out)), "ERROR")
+  end
+  if not should_stop and err ~= "" then
+    H.notify(err, "WARN")
+  end
   return should_stop
 end
 
 -- Utilities ------------------------------------------------------------------
-H.error = function(msg) error(string.format('(mini.git) %s', msg), 0) end
+H.error = function(msg)
+  error(string.format("(mini.git) %s", msg), 0)
+end
 
-H.notify = function(msg, level_name) vim.notify('(mini.git) ' .. msg, vim.log.levels[level_name]) end
+H.notify = function(msg, level_name)
+  vim.notify("(mini.git) " .. msg, vim.log.levels[level_name])
+end
 
 H.trigger_event = function(event_name, data)
   -- TODO: Remove after compatibility with Neovim=0.7 is dropped
-  if vim.fn.has('nvim-0.8') == 0 then data = nil end
-  vim.api.nvim_exec_autocmds('User', { pattern = event_name, data = data })
+  if vim.fn.has("nvim-0.8") == 0 then
+    data = nil
+  end
+  vim.api.nvim_exec_autocmds("User", { pattern = event_name, data = data })
 end
 
-H.is_fs_present = function(path) return vim.loop.fs_stat(path) ~= nil end
+H.is_fs_present = function(path)
+  return vim.loop.fs_stat(path) ~= nil
+end
 
 H.expandcmd = function(x)
-  if x == '<cwd>' then return vim.fn.getcwd() end
+  if x == "<cwd>" then
+    return vim.fn.getcwd()
+  end
   local ok, res = pcall(vim.fn.expandcmd, x)
   return ok and res or x
 end
 
 -- TODO: Remove after compatibility with Neovim=0.9 is dropped
-H.islist = vim.fn.has('nvim-0.10') == 1 and vim.islist or vim.tbl_islist
+H.islist = vim.fn.has("nvim-0.10") == 1 and vim.islist or vim.tbl_islist
 
-H.redrawstatus = function() vim.cmd('redrawstatus') end
-if vim.api.nvim__redraw ~= nil then H.redrawstatus = function() vim.api.nvim__redraw({ statusline = true }) end end
+H.redrawstatus = function()
+  vim.cmd("redrawstatus")
+end
+if vim.api.nvim__redraw ~= nil then
+  H.redrawstatus = function()
+    vim.api.nvim__redraw({ statusline = true })
+  end
+end
 
 return MiniGit
